@@ -96,7 +96,10 @@ sub status_of_all_our_workers { # returns an arrayref
     foreach my $meadow_user (@$meadow_users_of_interest) {
         my $user_part   = ($meadow_user eq '*') ? '' : "-u $meadow_user";
 
-        my $cmd = "qstat -xtf $user_part";          # Keep an eye on the efficiency of this approach, as we are parsing through much more data.
+        
+        my $filter_keywords=' -e '.join( ' -e ', map{ my $b=$_; $b =~ s/^|$/\'/g; $b}("Job Id", "Job_Name", "job_state", "Job_Owner", "queue", "server"));
+
+        my $cmd = "qstat -tf $user_part|grep $filter_keywords";      # Keep an eye on the efficiency of this approach, as we are parsing through much more data, filtering and parsing from the full format output
                                                     # When the rest of the Meadow drivers are ready to switch to Meadow v5
                                                     # we can switch over to parsing "qstat -wta" again (see below).
 
@@ -110,7 +113,7 @@ sub status_of_all_our_workers { # returns an arrayref
         for my $line (<$qstat_fh>) {
             chomp $line;
 
-            if($line=~/^Job Id: (\w+(\[\d*\])?\.\w+)/) {
+            if($line=~/^Job Id: (\d+(\[\d*\])?\.\w+)/) {
                 $current_mpid = $1;
                 $index_only = $2;
             } elsif($line=~/^\ {4}(\w+) = (.*)$/) {
@@ -121,9 +124,8 @@ sub status_of_all_our_workers { # returns an arrayref
             }
         }
         close $qstat_fh;
-
             # remove the arrayjob "headers":
-        my @array_header_mpids = grep /^\w+\[\]\.\w+$/, keys %mpid_attrib;
+        my @array_header_mpids = grep /^\d+\[\]\.\w+$/, keys %mpid_attrib;
         delete @mpid_attrib{@array_header_mpids};       # cutting out a slice
 
         while(my ($worker_mpid, $attrib) = each %mpid_attrib) {
@@ -200,7 +202,7 @@ sub check_worker_is_alive_and_mine {
     $wpid=~s{\[}{\\[}g;
     $wpid=~s{\]}{\\]}g;
     my $this_user = $ENV{'USER'};
-    my $cmd = qq{qselect -u $this_user -xT -s QREX | grep '$wpid'};
+    my $cmd = qq{qselect -u $this_user -T -s QREX | grep '$wpid'};
 
 #    warn "PBSPro::check_worker_is_alive_and_mine() running cmd:\n\t$cmd\n";
 
