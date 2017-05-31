@@ -94,12 +94,12 @@ sub status_of_all_our_workers { # returns an arrayref
     my @status_list = ();
 
     foreach my $meadow_user (@$meadow_users_of_interest) {
-        my $user_part   = ($meadow_user eq '*') ? '' : "-u $meadow_user";
+        my $user_part   = ($meadow_user eq '*' || $meadow_user eq '') ? '' : "-u $meadow_user";
 
         
         my $filter_keywords=' -e '.join( ' -e ', map{ my $b=$_; $b =~ s/^|$/\'/g; $b}("Job Id", "Job_Name", "job_state", "Job_Owner", "queue", "server"));
 
-        my $cmd = "qstat -tf $user_part|grep $filter_keywords";      # Keep an eye on the efficiency of this approach, as we are parsing through much more data, filtering and parsing from the full format output
+        my $cmd = "qstat -tf $user_part | grep $filter_keywords";      # Keep an eye on the efficiency of this approach, as we are parsing through much more data, filtering and parsing from the full format output
                                                     # When the rest of the Meadow drivers are ready to switch to Meadow v5
                                                     # we can switch over to parsing "qstat -wta" again (see below).
 
